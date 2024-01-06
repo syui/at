@@ -1,117 +1,118 @@
-# AT Protocol Reference Implementation (TypeScript)
+## atproto in docker
 
-Welcome friends!
+|server|url|port|
+|---|---|---|
+|pds|https://github.com/bluesky-social/atproto/tree/main/services/pds|2583|
+|appview|https://github.com/bluesky-social/atproto/tree/main/services/bsky|2584|
+|plc|https://github.com/did-method-plc/did-method-plc/tree/main/packages/server|2582|
+|bgs|https://github.com/bluesky-social/indigo/tree/main/cmd/bigsky|2470|
 
-This repository contains Bluesky's reference implementation of AT Protocol, and of the `app.bsky` microblogging application service backend.
+> .bsky.env
 
-## What is in here?
-
-**TypeScript Packages:**
-
-| Package                                                                       | Docs                                       | NPM                                                                                                             |
-| ----------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `@atproto/api`: client library                                                | [README](./packages/api/README.md)         | [![NPM](https://img.shields.io/npm/v/@atproto/api)](https://www.npmjs.com/package/@atproto/api)                 |
-| `@atproto/common-web`: shared code and helpers which can run in web browsers  | [README](./packages/common-web/README.md)  | [![NPM](https://img.shields.io/npm/v/@atproto/common-web)](https://www.npmjs.com/package/@atproto/common-web)   |
-| `@atproto/common`: shared code and helpers which doesn't work in web browsers | [README](./packages/common/README.md)      | [![NPM](https://img.shields.io/npm/v/@atproto/common)](https://www.npmjs.com/package/@atproto/common)           |
-| `@atproto/crypto`: cryptographic signing and key serialization                | [README](./packages/crypto/README.md)      | [![NPM](https://img.shields.io/npm/v/@atproto/crypto)](https://www.npmjs.com/package/@atproto/crypto)           |
-| `@atproto/identity`: DID and handle resolution                                | [README](./packages/identity/README.md)    | [![NPM](https://img.shields.io/npm/v/@atproto/identity)](https://www.npmjs.com/package/@atproto/identity)       |
-| `@atproto/lexicon`: schema definition language                                | [README](./packages/lexicon/README.md)     | [![NPM](https://img.shields.io/npm/v/@atproto/lexicon)](https://www.npmjs.com/package/@atproto/lexicon)         |
-| `@atproto/repo`: data storage structure, including MST                        | [README](./packages/repo/README.md)        | [![NPM](https://img.shields.io/npm/v/@atproto/repo)](https://www.npmjs.com/package/@atproto/repo)               |
-| `@atproto/syntax`: string parsers for identifiers                             | [README](./packages/syntax/README.md)      | [![NPM](https://img.shields.io/npm/v/@atproto/syntax)](https://www.npmjs.com/package/@atproto/syntax)           |
-| `@atproto/xrpc`: client-side HTTP API helpers                                 | [README](./packages/xrpc/README.md)        | [![NPM](https://img.shields.io/npm/v/@atproto/xrpc)](https://www.npmjs.com/package/@atproto/xrpc)               |
-| `@atproto/xrpc-server`: server-side HTTP API helpers                          | [README](./packages/xrpc-server/README.md) | [![NPM](https://img.shields.io/npm/v/@atproto/xrpc-server)](https://www.npmjs.com/package/@atproto/xrpc-server) |
-
-**TypeScript Services:**
-
-- `pds`: "Personal Data Server", hosting repo content for atproto accounts. Most implementation code in `packages/pds`, with runtime wrapper in `services/pds`. See [bluesky-social/pds](https://github.com/bluesky-social/pds) for directions on self-hosting in the [federation sandbox network](https://atproto.com/blog/federation-developer-sandbox).
-- `bsky`: AppView implementation of the `app.bsky.*` API endpoints. Running on main network at `api.bsky.app`. Most implementation code in `packages/bsky`, with runtime wrapper in `services/bsky`.
-
-**Lexicons:** for both the `com.atproto.*` and `app.bsky.*` are canonically versioned in this repo, for now, under `./lexicons/`. These are JSON files in the [Lexicon schema definition language](https://atproto.com/specs/lexicon), similar to JSON Schema or OpenAPI.
-
-**Interoperability Test Data:** the language-neutral test files in `./interop-test-files/` may be useful for other protocol implementations to ensure that they follow the specification correctly
-
-The source code for the Bluesky Social client app (for web and mobile) can be found at [bluesky-social/social-app](https://github.com/bluesky-social/social-app).
-
-Go programming language source code is in [bluesky-social/indigo](https://github.com/bluesky-social/indigo), including the BGS implementation.
-
-## Developer Quickstart
-
-We recommend [`nvm`](https://github.com/nvm-sh/nvm) for managing Node.js installs. This project requires Node.js version 18. `pnpm` is used to manage the workspace of multiple packages. You can install it with `npm install --global pnpm`.
-
-There is a Makefile which can help with basic development tasks:
-
-```shell
-# use existing nvm to install node 18 and pnpm
-make nvm-setup
-
-# pull dependencies and build all local packages
-make deps
-make build
-
-# run the tests, using Docker services as needed
-make test
-
-# run a local PDS and AppView with fake test accounts and data
-# (this requires a global installation of `jq` and `docker`)
-make run-dev-env
-
-# show all other commands
-make help
+```sh
+PORT=2584
+PUBLIC_URL=example.com
+DID_PLC_URL=plc.example.com
+DB_PRIMARY_POSTGRES_URL="postgresql://postgres:password@localhost:5404/postgres"
+REDIS_HOST="127.0.0.1:6379"
+SERVER_DID=did:web:api.example.com
+#SERVICE_SIGNING_KEY=xxx
+#SERVER_DID=did:plc:xxx
 ```
 
-## About AT Protocol
+> compose.yaml
 
-The Authenticated Transfer Protocol ("ATP" or "atproto") is a decentralized social media protocol, developed by [Bluesky PBC](https://blueskyweb.xyz). Learn more at:
+```yaml
+version: '3.9'
 
-- [Overview and Guides](https://atproto.com/guides/overview) 👈 Best starting point
-- [Github Discussions](https://github.com/bluesky-social/atproto/discussions) 👈 Great place to ask questions
-- [Protocol Specifications](https://atproto.com/specs/atp)
-- [Blogpost on self-authenticating data structures](https://blueskyweb.xyz/blog/3-6-2022-a-self-authenticating-social-protocol)
+services:
+  bsky_db:
+    container_name: bsky_db
+    restart: always
+    image: postgres:14
+    ports:
+      - 5404:5432
+    volumes:
+      - ./data/bsky:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
 
-The Bluesky Social application encompasses a set of schemas and APIs built in the overall AT Protocol framework. The namespace for these "Lexicons" is `app.bsky.*`.
+  bsky_redis:
+    container_name: bsky_redis
+    image: redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./data/redis:/data
 
-## Contributions
+  bsky:
+    container_name: bsky
+    build:
+      context: .
+      dockerfile: services/bsky/Dockerfile
+    ports:
+      - 2584:2584
+    depends_on:
+      - bsky_db
+      - bsky_redis
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./.bsky.env
+    volumes:
+      - type: bind
+        source: ./services/bsky
+        target: /app/services/bsky
+```
 
-> While we do accept contributions, we prioritize high quality issues and pull requests. Adhering to the below guidelines will ensure a more timely review.
+### appview : SERVICE_SIGNING_KEY/SERVER_DID
 
-**Rules:**
+> packages/devn-env/src/bsky.ts 
 
-- We may not respond to your issue or PR.
-- We may close an issue or PR without much feedback.
-- We may lock discussions or contributions if our attention is getting DDOSed.
-- We do not provide support for build issues.
+```ts
+//SERVICE_SIGNING_KEY=xxx
+//SERVER_DID=did:plc:xxx
+  static async create(cfg: BskyConfig): Promise<TestBsky> {
+    // packages/crypto/tests/keypairs.test.ts
+    const serviceKeypair = await Secp256k1Keypair.create({ exportable: true })
+    console.log(`ROTATION_KEY=${serviceKeypair.did()}`)
+    const exported = await serviceKeypair.export()
+    const plcClient = new PlcClient(cfg.plcUrl)
 
-**Guidelines:**
+    const port = cfg.port || (await getPort())
+    const url = `http://localhost:${port}`
+    const serverDid = await plcClient.createDid({
+      signingKey: serviceKeypair.did(),
+      rotationKeys: [serviceKeypair.did()],
+      handle: 'bsky.test',
+      pds: `http://localhost:${port}`,
+      signer: serviceKeypair,
+    })
+    console.log(`SERVER_DID=${serverDid}`)
 
-- Check for existing issues before filing a new one, please.
-- Open an issue and give some time for discussion before submitting a PR.
-- If submitting a PR that includes a lexicon change, please get sign off on the lexicon change _before_ doing the implementation.
-- Issues are for bugs & feature requests related to the TypeScript implementation of atproto and related services.
-  - For high-level discussions, please use the [Discussion Forum](https://github.com/bluesky-social/atproto/discussions).
-  - For client issues, please use the relevant [social-app](https://github.com/bluesky-social/social-app) repo.
-- Stay away from PRs that:
-  - Refactor large parts of the codebase
-  - Add entirely new features without prior discussion
-  - Change the tooling or frameworks used without prior discussion
-  - Introduce new unnecessary dependencies
+    const server = bsky.BskyAppView.create({
+      db,
+      redis: redisCache,
+      config,
+      algos: cfg.algos,
+      imgInvalidator: cfg.imgInvalidator,
+      signingKey: serviceKeypair,
+    })
+```
 
-Remember, we serve a wide community of users. Our day-to-day involves us constantly asking "which top priority is our top priority." If you submit well-written PRs that solve problems concisely, that's an awesome contribution. Otherwise, as much as we'd love to accept your ideas and contributions, we really don't have the bandwidth.
+```sh
+# https://web.plc.directory/api/redoc#operation/ResolveDid
+url=https://plc.directory/did:plc:pyc2ihzpelxtg4cdkfzbhcv4
+json='{ "type": "create", "signingKey": "did:key:zQ3shP5TBe1sQfSttXty15FAEHV1DZgcxRZNxvEWnPfLFwLxJ", "recoveryKey": "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg", "handle": "first-post.bsky.social", "service": "https://bsky.social", "prev": null, "sig": "yvN4nQYWTZTDl9nKSSyC5EC3nsF5g4S56OmRg9G6_-pM6FCItV2U2u14riiMGyHiCD86l6O-1xC5MPwf8vVsRw" }'
+curl -X POST -H "Content-Type: application/json" -d "$json" $url | jq .
+```
 
-## Are you a developer interested in building on atproto?
+### pds : invitecode 
 
-Bluesky is an open social network built on the AT Protocol, a flexible technology that will never lock developers out of the ecosystems that they help build. With atproto, third-party can be as seamless as first-party through custom feeds, federated services, clients, and more.
-
-If you're a developer interested in building on atproto, we'd love to email you a Bluesky invite code. Simply share your GitHub (or similar) profile with us via [this form](https://forms.gle/BF21oxVNZiDjDhXF9).
-
-## Security disclosures
-
-If you discover any security issues, please send an email to security@bsky.app. The email is automatically CCed to the entire team, and we'll respond promptly. See [SECURITY.md](https://github.com/bluesky-social/atproto/blob/main/SECURITY.md) for more info.
-
-## License
-
-This project is dual-licensed under MIT and Apache 2.0 terms:
-
-- MIT license ([LICENSE-MIT.txt](https://github.com/bluesky-social/atproto/blob/main/LICENSE-MIT.txt) or http://opensource.org/licenses/MIT)
-- Apache License, Version 2.0, ([LICENSE-APACHE.txt](https://github.com/bluesky-social/atproto/blob/main/LICENSE-APACHE.txt) or http://www.apache.org/licenses/LICENSE-2.0)
-
-Downstream projects and end users may chose either license individually, or both together, at their discretion. The motivation for this dual-licensing is the additional software patent assurance provided by Apache 2.0.
+```sh
+host=example.com
+admin_password="admin-pass"
+url=https://$host/xrpc/com.atproto.server.createInviteCode
+json="{\"useCount\":1}"
+curl -X POST -u admin:${admin_password} -H "Content-Type: application/json" -d "$json" -sL $url | jq .
+```

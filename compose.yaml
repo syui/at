@@ -1,0 +1,128 @@
+version: '3.9'
+
+services:
+  bsky_db:
+    container_name: bsky_db
+    restart: always
+    image: postgres:14
+    ports:
+      - 5404:5432
+    volumes:
+      - ./data/bsky:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
+
+  pds_db:
+    container_name: pds_db
+    restart: always
+    image: postgres:14
+    ports:
+      - 5403:5432
+    volumes:
+      - ./data/pds:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=password
+
+  plc_db:
+    container_name: plc_db
+    image: postgres:14
+    ports:
+      - 5402:5432
+    volumes:
+      - ./data/plc:/var/lib/postgresql/data
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=password
+
+  bsky_redis:
+    container_name: bsky_redis
+    image: redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./data/redis:/data
+
+  plc:
+    container_name: plc
+    depends_on:
+      - plc_db
+    build:
+      context: ./services_origin/plc
+      dockerfile: packages/server/Dockerfile
+    ports:
+      - 2582:2582
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./.plc.env
+    volumes:
+      - type: bind
+        source: ./services_origin/plc/packages/server
+        target: /app/services/plc
+
+  pds:
+    container_name: pds
+    depends_on:
+      - pds_db
+    build:
+      context: .
+      dockerfile: services/pds/Dockerfile
+    ports:
+      - 2583:2583
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./.pds.env
+    volumes:
+      - type: bind
+        source: ./services/pds
+        target: /app/services/pds
+
+  bsky:
+    container_name: bsky
+    build:
+      context: .
+      dockerfile: services/bsky/Dockerfile
+    ports:
+      - 2584:2584
+    depends_on:
+      - bsky_db
+      - bsky_redis
+    network_mode: host
+    restart: unless-stopped
+    env_file:
+      - ./.bsky.env
+    volumes:
+      - type: bind
+        source: ./services/bsky
+        target: /app/services/bsky
+
+  bgs:
+    container_name: bgs
+    build:
+      context: ./services_origin/bgs
+      dockerfile: cmd/bigsky/Dockerfile
+    env_file:
+      - ./.bgs.env
+    ports:
+      - 2470:2470
+      - 2471:2471
+    volumes:
+      - ./data/bgs:/data/bgs
+
+        #  ozone:
+        #    container_name: ozone
+        #    build:
+        #      context: .
+        #      dockerfile: services/ozone/Dockerfile
+        #    ports:
+        #      - 3000:3000
+        #    network_mode: host
+        #    restart: unless-stopped
+        #    env_file:
+        #      - ./.ozone.env
+        #    volumes:
+        #      - type: bind
+        #        source: ./services/ozone
+        #        target: /app/services/ozone
+
