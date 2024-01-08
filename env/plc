@@ -1,0 +1,8 @@
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+DATABASE_URL="postgres://postgres:postgres@database/plc"
+DB_CREDS_JSON='{"username":"postgres","password":"postgres","host":"database","port":"5432","database":"plc"}'
+ENABLE_MIGRATIONS=true
+DB_MIGRATE_CREDS_JSON='{"username":"postgres","password":"postgres","host":"database","port":"5432","database":"plc"}'

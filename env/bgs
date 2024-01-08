@@ -1,0 +1,11 @@
+DEBUG_MODE=1
+LOG_ENABLED="true"
+LOG_LEVEL=debug
+LOG_DESTINATION=1
+
+DATABASE_URL=postgres://postgres:postgres@database/bgs
+CARSTORE_DATABASE_URL=postgres://postgres:postgres@database/carstore
+DATA_DIR=/data
+ATP_PLC_HOST=https://plc.syu.is
+
+#BGS_ADMIN_KEY

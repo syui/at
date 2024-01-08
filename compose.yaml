@@ -1,128 +1,218 @@
-version: '3.9'
-
 services:
-  bsky_db:
-    container_name: bsky_db
-    restart: always
-    image: postgres:14
-    ports:
-      - 5404:5432
-    volumes:
-      - ./data/bsky:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=password
-
-  pds_db:
-    container_name: pds_db
-    restart: always
-    image: postgres:14
-    ports:
-      - 5403:5432
-    volumes:
-      - ./data/pds:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_PASSWORD=password
-
-  plc_db:
-    container_name: plc_db
-    image: postgres:14
-    ports:
-      - 5402:5432
-    volumes:
-      - ./data/plc:/var/lib/postgresql/data
-    restart: always
-    environment:
-      - POSTGRES_PASSWORD=password
-
-  bsky_redis:
-    container_name: bsky_redis
-    image: redis
-    ports:
-      - 6379:6379
-    volumes:
-      - ./data/redis:/data
-
   plc:
-    container_name: plc
-    depends_on:
-      - plc_db
+    ports:
+      - 2582:3000
     build:
-      context: ./services_origin/plc
+      context: ./repos/did-method-plc/
       dockerfile: packages/server/Dockerfile
-    ports:
-      - 2582:2582
-    network_mode: host
-    restart: unless-stopped
+    restart: always
     env_file:
-      - ./.plc.env
-    volumes:
-      - type: bind
-        source: ./services_origin/plc/packages/server
-        target: /app/services/plc
-
-  pds:
-    container_name: pds
+      - ./.env/plc
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/_health"
+      interval: 5s
+      retries: 20
     depends_on:
-      - pds_db
-    build:
-      context: .
-      dockerfile: services/pds/Dockerfile
-    ports:
-      - 2583:2583
-    network_mode: host
-    restart: unless-stopped
-    env_file:
-      - ./.pds.env
-    volumes:
-      - type: bind
-        source: ./services/pds
-        target: /app/services/pds
-
-  bsky:
-    container_name: bsky
-    build:
-      context: .
-      dockerfile: services/bsky/Dockerfile
-    ports:
-      - 2584:2584
-    depends_on:
-      - bsky_db
-      - bsky_redis
-    network_mode: host
-    restart: unless-stopped
-    env_file:
-      - ./.bsky.env
-    volumes:
-      - type: bind
-        source: ./services/bsky
-        target: /app/services/bsky
+      postgres:
+        condition: service_healthy
 
   bgs:
-    container_name: bgs
-    build:
-      context: ./services_origin/bgs
-      dockerfile: cmd/bigsky/Dockerfile
-    env_file:
-      - ./.bgs.env
     ports:
       - 2470:2470
-      - 2471:2471
+    build:
+      context: ./repos/indigo/
+      dockerfile: cmd/bigsky/Dockerfile
+    restart: always
+    env_file:
+      - ./.env/bgs
     volumes:
-      - ./data/bgs:/data/bgs
+      - ./data/bgs/:/data/
+    healthcheck:
+      test: "wget -q --spider http://localhost:2470/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+  bsky-fix-permission:
+    image: alpine:latest
+    volumes:
+      - ./data/bsky/cache/:/cache/
+    command: chown 1000.1000 /cache
 
-        #  ozone:
-        #    container_name: ozone
-        #    build:
-        #      context: .
-        #      dockerfile: services/ozone/Dockerfile
-        #    ports:
-        #      - 3000:3000
-        #    network_mode: host
-        #    restart: unless-stopped
-        #    env_file:
-        #      - ./.ozone.env
-        #    volumes:
-        #      - type: bind
-        #        source: ./services/ozone
-        #        target: /app/services/ozone
+  bsky:
+    ports:
+      - 2584:3000
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    env_file:
+      - ./.env/bsky
+    volumes:
+      - ./data/bsky/cache/:/cache/
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bsky-fix-permission:
+        condition: service_completed_successfully
+
+  bsky-daemon:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps daemon.js
+    env_file:
+      - ./.env/bsky
+    volumes:
+      - ./data/bsky/cache/:/cache/
+    depends_on:
+      bsky:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bsky-fix-permission:
+        condition: service_completed_successfully
+
+  bsky-indexer:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps indexer.js
+    env_file:
+      - ./.env/bsky
+    volumes:
+      - ./data/bsky/cache/:/cache/
+    depends_on:
+      bsky:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bsky-fix-permission:
+        condition: service_completed_successfully
+
+  bsky-ingester:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/bsky/Dockerfile
+    restart: always
+    command: node --enable-source-maps ingester.js
+    env_file:
+      - ./.env/bsky
+    volumes:
+      - ./data/bsky/cache/:/cache/
+    depends_on:
+      bsky:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bsky-fix-permission:
+        condition: service_completed_successfully
+
+  mod:
+    ports:
+      - 2585:3000
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/ozone/Dockerfile
+    restart: always
+    env_file:
+      - ./.env/mod
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mod-daemon:
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/ozone/Dockerfile
+    restart: always
+    command: node --enable-source-maps daemon.js
+    env_file:
+      - ./.env/mod
+    depends_on:
+      mod:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  pds-fix-permission:
+    image: alpine:latest
+    volumes:
+      - ./data/pds/:/data/
+    command: chown 1000.1000 /data
+
+  pds:
+    ports:
+      - 2583:3000
+    build:
+      context: ./repos/atproto/
+      dockerfile: services/pds/Dockerfile
+    restart: always
+    env_file:
+      - ./.env/pds
+    volumes:
+      - ./data/pds/:/data/
+    healthcheck:
+      test: "wget -q --spider http://localhost:3000/xrpc/_health"
+      interval: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pds-fix-permission:
+        condition: service_completed_successfully
+
+  app:
+    ports:
+      - 8100:8100
+    build:
+      context: ./repos/social-app/
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./.env/app
+    command: "/usr/bin/bskyweb serve"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - ./.env/postgres
+    volumes:
+      - ./postgres/init/:/docker-entrypoint-initdb.d/
+      - ./data/postgres/:/var/lib/postgresql/data/
+    healthcheck:
+      test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - ./data/redis/:/data/
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping", "|", "grep", "PONG"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
 
