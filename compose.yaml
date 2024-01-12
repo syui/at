@@ -7,24 +7,25 @@ services:
       dockerfile: packages/server/Dockerfile
     restart: always
     env_file:
-      - ./.env/plc
+      - ./envs/plc
     healthcheck:
       test: "wget -q --spider http://localhost:3000/_health"
       interval: 5s
       retries: 20
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
 
   bgs:
     ports:
       - 2470:2470
+      - 2471:2471
     build:
       context: ./repos/indigo/
       dockerfile: cmd/bigsky/Dockerfile
     restart: always
     env_file:
-      - ./.env/bgs
+      - ./envs/bgs
     volumes:
       - ./data/bgs/:/data/
     healthcheck:
@@ -32,15 +33,15 @@ services:
       interval: 5s
       retries: 20
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
-  bsky-fix-permission:
+  appview-fix-permission:
     image: alpine:latest
     volumes:
-      - ./data/bsky/cache/:/cache/
+      - ./data/appview/cache/:/cache/
     command: chown 1000.1000 /cache
 
-  bsky:
+  appview-api:
     ports:
       - 2584:3000
     build:
@@ -48,82 +49,82 @@ services:
       dockerfile: services/bsky/Dockerfile
     restart: always
     env_file:
-      - ./.env/bsky
+      - ./envs/appview
     volumes:
-      - ./data/bsky/cache/:/cache/
+      - ./data/appview/cache/:/cache/
     healthcheck:
       test: "wget -q --spider http://localhost:3000/xrpc/_health"
       interval: 5s
       retries: 20
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
       redis:
         condition: service_healthy
-      bsky-fix-permission:
+      appview-fix-permission:
         condition: service_completed_successfully
 
-  bsky-daemon:
+  appview-daemon:
     build:
       context: ./repos/atproto/
       dockerfile: services/bsky/Dockerfile
     restart: always
     command: node --enable-source-maps daemon.js
     env_file:
-      - ./.env/bsky
+      - ./envs/appview
     volumes:
-      - ./data/bsky/cache/:/cache/
+      - ./data/appview/cache/:/cache/
     depends_on:
-      bsky:
+      appview-api:
         condition: service_healthy
-      postgres:
+      database:
         condition: service_healthy
       redis:
         condition: service_healthy
-      bsky-fix-permission:
+      appview-fix-permission:
         condition: service_completed_successfully
 
-  bsky-indexer:
+  appview-indexer:
     build:
       context: ./repos/atproto/
       dockerfile: services/bsky/Dockerfile
     restart: always
     command: node --enable-source-maps indexer.js
     env_file:
-      - ./.env/bsky
+      - ./envs/appview
     volumes:
-      - ./data/bsky/cache/:/cache/
+      - ./data/appview/cache/:/cache/
     depends_on:
-      bsky:
+      appview-api:
         condition: service_healthy
-      postgres:
+      database:
         condition: service_healthy
       redis:
         condition: service_healthy
-      bsky-fix-permission:
+      appview-fix-permission:
         condition: service_completed_successfully
 
-  bsky-ingester:
+  appview-ingester:
     build:
       context: ./repos/atproto/
       dockerfile: services/bsky/Dockerfile
     restart: always
     command: node --enable-source-maps ingester.js
     env_file:
-      - ./.env/bsky
+      - ./envs/appview
     volumes:
-      - ./data/bsky/cache/:/cache/
+      - ./data/appview/cache/:/cache/
     depends_on:
-      bsky:
+      appview-api:
         condition: service_healthy
-      postgres:
+      database:
         condition: service_healthy
       redis:
         condition: service_healthy
-      bsky-fix-permission:
+      appview-fix-permission:
         condition: service_completed_successfully
 
-  mod:
+  moderation-api:
     ports:
       - 2585:3000
     build:
@@ -131,27 +132,27 @@ services:
       dockerfile: services/ozone/Dockerfile
     restart: always
     env_file:
-      - ./.env/mod
+      - ./envs/moderation
     healthcheck:
       test: "wget -q --spider http://localhost:3000/xrpc/_health"
       interval: 5s
       retries: 20
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
 
-  mod-daemon:
+  moderation-daemon:
     build:
       context: ./repos/atproto/
       dockerfile: services/ozone/Dockerfile
     restart: always
     command: node --enable-source-maps daemon.js
     env_file:
-      - ./.env/mod
+      - ./envs/moderation
     depends_on:
-      mod:
+      moderation-api:
         condition: service_healthy
-      postgres:
+      database:
         condition: service_healthy
 
   pds-fix-permission:
@@ -168,7 +169,7 @@ services:
       dockerfile: services/pds/Dockerfile
     restart: always
     env_file:
-      - ./.env/pds
+      - ./envs/pds
     volumes:
       - ./data/pds/:/data/
     healthcheck:
@@ -176,30 +177,19 @@ services:
       interval: 5s
       retries: 20
     depends_on:
-      postgres:
+      database:
         condition: service_healthy
       pds-fix-permission:
         condition: service_completed_successfully
 
-  app:
-    ports:
-      - 8100:8100
-    build:
-      context: ./repos/social-app/
-      dockerfile: Dockerfile
-    restart: always
-    env_file:
-      - ./.env/app
-    command: "/usr/bin/bskyweb serve"
-
-  postgres:
+  database:
     image: postgres:16-alpine
     restart: always
     env_file:
-      - ./.env/postgres
+      - ./envs/postgres
     volumes:
-      - ./postgres/init/:/docker-entrypoint-initdb.d/
-      - ./data/postgres/:/var/lib/postgresql/data/
+      - ./configs/postgres/init/:/docker-entrypoint-initdb.d/
+      - ./data/database/:/var/lib/postgresql/data/
     healthcheck:
       test: "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"
       interval: 5s
@@ -215,4 +205,69 @@ services:
       interval: 1s
       timeout: 5s
       retries: 5
+
+  social-app:
+    ports:
+      - 8100:8100
+    build:
+      context: ./repos/social-app/
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./envs/social-app
+    command: "/usr/bin/bskyweb serve"
+
+  search:
+    ports:
+      - 3999:3999
+    build:
+      context: ./repos/indigo/
+      dockerfile: cmd/palomar/Dockerfile
+    restart: always
+    env_file:
+      - ./envs/search
+    depends_on:
+      database:
+        condition: service_healthy
+      #      opensearch:
+      #        condition: service_healthy
+
+          #  opensearch-fix-permission:
+          #    image: alpine:latest
+          #    volumes:
+          #      - ./data/opensearch/:/data/
+          #    command: chown 1000.1000 /data/
+          #
+          #  opensearch:
+          #    ports:
+          #      - 9200:9200
+          #    build:
+          #      context: ./repos/indigo/
+          #      dockerfile: cmd/palomar/Dockerfile.opensearch
+          #    restart: always
+          #    env_file:
+          #      - ./envs/opensearch
+          #    ulimits:
+          #      memlock:
+          #        soft: -1
+          #        hard: -1
+          #    volumes:
+          #      - ./data/opensearch/:/usr/share/opensearch/data/
+          #    depends_on:
+          #      opensearch-fix-permission:
+          #        condition: service_completed_successfully
+          #    healthcheck:
+          #      test:
+          #        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+          
+  feed-generator:
+    ports:
+      - 2586:3000
+    build:
+      context: ./repos/feed-generator/
+    restart: always
+    env_file:
+      - ./envs/feed-generator
+    volumes:
+      - ./data/feed-generator/:/data/
 

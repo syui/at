@@ -1,7 +1,9 @@
 ### use
 
 ```sh
-$ cp -rf env .env
+$ cp -rf env envs
+
+$ ./install.zsh
 ```
 
 ### ref

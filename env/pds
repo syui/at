@@ -15,6 +15,7 @@ PDS_EMAIL_SMTP_URL=smtps://$username:$password@smtp.gmail.com
 PDS_EMAIL_FROM_ADDRESS=no-reply@syu.is
 PDS_INVITE_REQUIRED=false
 PDS_INVITE_INTERVAL=604800000
+#PDS_SERVICE_HANDLE_DOMAINS="[.is, .ai, .yui]"
 
 #PDS_BLOBSTORE_S3_BUCKET=syuis-blobstore
 PDS_BLOBSTORE_DISK_LOCATION=/data/img/static

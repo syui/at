@@ -1,0 +1,12 @@
+FEEDGEN_PORT=3000
+FEEDGEN_LISTENHOST="0.0.0.0"
+FEEDGEN_SQLITE_LOCATION="/data/db.sqlite"
+#FEEDGEN_SUBSCRIPTION_ENDPOINT="wss://bsky.network"
+FEEDGEN_SUBSCRIPTION_ENDPOINT="wss://bgs.syu.is"
+
+FEEDGEN_HOSTNAME="feed.syu.is"
+FEEDGEN_PUBLISHER_DID="did:web:feed.syu.is"
+# Only use this if you want a service did different from did:web
+# FEEDGEN_SERVICE_DID="did:plc:abcde..."
+
+FEEDGEN_SUBSCRIPTION_RECONNECT_DELAY=3000

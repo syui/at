@@ -1,2 +1,5 @@
 .envs
+envs
 .compose.yaml
+repos
+config.json
