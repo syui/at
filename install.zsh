@@ -76,6 +76,7 @@ run_env_write() {
 	echo MODERATION_PUSH_URL=https://admin:${OZONE_ADMIN_PASSWORD}@mod.${host} >> $d/.env/appview
 	echo MODERATION_PUSH_URL=https://admin:${OZONE_ADMIN_PASSWORD}@mod.${host} >> $d/.env/moderation
 	echo ADMIN_PASSWORD=$ADMIN_PASSWORD >> $d/.env/appview
+	echo "{\"admin_password\": \"$ADMIN_PASSWORD\"}" >> $d/config.json
 	echo MODERATOR_PASSWORD=$MODERATOR_PASSWORD >> $d/.env/appview
 	echo TRIAGE_PASSWORD=$TRIAGE_PASSWORD >> $d/.env/appview
 	echo SERVICE_SIGNING_KEY=$SERVICE_SIGNING_KEY >> $d/.env/appview
